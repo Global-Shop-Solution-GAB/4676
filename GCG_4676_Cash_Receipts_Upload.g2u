@@ -1,0 +1,1255 @@
+Program.Sub.ScreenSU.Start
+Gui.FORM..Create
+Gui.FORM..Caption("Data validation")
+Gui.FORM..Size(20730,14370)
+Gui.FORM..MinX(0)
+Gui.FORM..MinY(0)
+Gui.FORM..Position(0,0)
+Gui.FORM..BackColor(-2147483633)
+Gui.FORM..MousePointer(0)
+Gui.FORM..Event(UnLoad,FORM_UnLoad)
+Gui.FORM.gs.Create(GsGridControl)
+Gui.FORM.gs.Size(20190,12885)
+Gui.FORM.gs.Position(135,810)
+Gui.FORM.gs.Event(CellValueChanged,gs_CellValueChanged)
+Gui.FORM.lbl1.Create(Label,"Total Row:",True,990,255,0,1305,360,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.cmdCountError.Create(Button)
+Gui.FORM.cmdCountError.Size(1290,375)
+Gui.FORM.cmdCountError.Position(3465,225)
+Gui.FORM.cmdCountError.Event(Click,Error_Count)
+Gui.FORM.cmdCountError.Caption("Count Error")
+Gui.FORM.cmdCountError.ToolTip("Click Count Error to make sure you have 0 error before the Upload.")
+Gui.FORM.cmdUpload.Create(Button)
+Gui.FORM.cmdUpload.Size(855,375)
+Gui.FORM.cmdUpload.Position(150,255)
+Gui.FORM.cmdUpload.Caption("Upload")
+Gui.FORM.cmdUpload.Event(Click,cmdUpload_Click)
+Gui.FORM.cmdUpload.ToolTip("The grid does not check for CheckAmount. Clicking Upload will check for it before the Cash Receipt is processed.")
+Gui.FORM.lblErrorCount.Create(Label,"Label",True,540,255,0,4830,345,True,4,"Arial",8,-2147483621,0)
+Gui.FORM.lblTotalRow.Create(Label,"Label",True,690,255,0,2325,405,True,4,"Arial",8,-2147483621,0)
+Gui.FORM.lbl2.Create(Label,"Total",True,705,255,0,13620,180,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lblTotalGrossAmount.Create(Label,"Label",True,855,255,0,12015,525,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lblTotalDiscountAmount.Create(Label,"Label",True,990,255,0,13650,525,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lblTotalNetAmount.Create(Label,"Label",True,930,255,0,15330,525,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lbl3.Create(Label,"+",True,315,255,0,14745,525,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lblEqual.Create(Label,"=",True,675,255,0,12915,525,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lbl4.Create(Label,"Total",True,705,255,0,11985,180,True,0,"Arial",8,-2147483633,0)
+Gui.FORM.lbl5.Create(Label,"Total",True,705,255,0,15300,180,True,0,"Arial",8,-2147483633,0)
+Gui.Progress..Create
+Gui.Progress..Size(15360,1500)
+Gui.Progress..MinX(0)
+Gui.Progress..MinY(0)
+Gui.Progress..Position(0,0)
+Gui.Progress..BackColor(-2147483633)
+Gui.Progress..MousePointer(0)
+Gui.Progress.proBar.Create(ProgressBar)
+Gui.Progress.proBar.Size(14595,255)
+Gui.Progress.proBar.Position(285,405)
+Gui.Progress.lbl1.Create(Label,"...processing",True,1935,255,0,285,180,True,0,"Arial",8,-2147483633,0)
+Gui.SelectFile..Create
+Gui.SelectFile..Caption("File Selection")
+Gui.SelectFile..Size(15210,1875)
+Gui.SelectFile..MinX(0)
+Gui.SelectFile..MinY(0)
+Gui.SelectFile..Position(0,0)
+Gui.SelectFile..BackColor(-2147483633)
+Gui.SelectFile..MousePointer(0)
+Gui.SelectFile..Event(UnLoad,FORM_UnLoad)
+Gui.SelectFile.txtOriginalFilePath.Create(TextBox,"",True,13425,300,0,210,450,True,0,"Arial",8,-2147483643,1)
+Gui.SelectFile.lbl1.Create(Label,".xls file path",True,1935,255,0,195,210,True,0,"Arial",8,-2147483633,0)
+Gui.SelectFile.cmdBrowseFile.Create(Button)
+Gui.SelectFile.cmdBrowseFile.Size(855,375)
+Gui.SelectFile.cmdBrowseFile.Position(13800,405)
+Gui.SelectFile.cmdBrowseFile.Caption("^")
+Gui.SelectFile.cmdBrowseFile.Event(Click,Browse_File)
+Gui.SelectFile.cmdBrowseFile.ToolTip("Browse the target Excel file")
+Gui.SelectFile.OK.Create(Button)
+Gui.SelectFile.OK.Size(705,375)
+Gui.SelectFile.OK.Position(210,885)
+Gui.SelectFile.OK.Caption("OK")
+Gui.SelectFile.OK.Event(Click,OK_Click)
+Gui.SelectFile.OK.ToolTip("Click Ok to scan errors before uploading")
+Gui.SelectFile.txtMaxOfLines.Create(TextBox,"2000",True,555,300,0,13065,960,True,0,"Arial",8,-2147483643,1)
+Gui.SelectFile.txtMaxOfLines.MaxLength(5)
+Gui.SelectFile.lbl2.Create(Label,"Max Lines",True,915,255,0,12075,1020,True,0,"Arial",8,-2147483633,0)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global..BulkDeclareString(sFileExcel, sFileExcel_Result, sBatchNum, sBatchDateNowMMDDYY)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+'BN, July 27, 2017
+'This project will create a Cash Receipt upload from an Excel or csv file, for multiple customers with single/multiple checks per customer
+'runs from a custom menu item Account Receivables > Transactions
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sHold, sError)
+v.Local..BulkDeclareLong(iBatch)
+V.Local.sBatch.Declare
+v.Local.sNextBatch.Declare
+
+F.ODBC.Connection!conx.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass,15000)
+
+'sBatchDate
+f.Intrinsic.String.Format(v.Ambient.Date,"MMDDYY",v.Global.sBatchDateNowMMDDYY)
+
+'Initialize by Admin
+'v.Global.sBatchNum.Set("402")
+'F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"BATCH","4676","2000",False,v.Global.sBatchNum,False,0,-1,v.Ambient.Date,12:00:00 AM)
+'f.Intrinsic.Control.exitsub
+
+'Generate sBatchNum BN 05 21 2021
+F.Global.Registry.ReadValue("SUPERVSR",V.Caller.CompanyCode,"BATCH",4676,2000,5,"",V.Local.sBatch)
+f.Intrinsic.Control.If(v.Local.sBatch.Trim,=,"",or,v.Local.sBatch,=,"9999")
+	F.Intrinsic.UI.Msgbox("Please contact Global Shop to assign Batch number. Cannot find the next Batch number starting with H.")	
+	f.ODBC.Connection!conx.Close
+	f.Intrinsic.Control.End
+f.Intrinsic.Control.EndIf
+f.Intrinsic.Math.Add(v.Local.sBatch.Trim,1,v.Local.sNextBatch)
+F.Global.Registry.AddValue("SUPERVSR",V.Caller.CompanyCode,"BATCH",4676,2000,False,V.Local.sNextBatch,False,0,-999.0,1/1/1980,12:00:00 AM)
+f.Intrinsic.String.LPad(v.Local.sBatch,"0",4,v.Local.sBatch)
+f.Intrinsic.String.Build("H{0}",v.Local.sBatch,v.Global.sBatchNum)
+
+
+
+
+
+'f.ODBC.Connection!conx.ExecuteAndReturn("select Max(Cast(Right(Batch,4) as Integer)) from GL_Batch_Log where Batch like 'H%'",v.Local.sHold)
+'f.Intrinsic.Control.If(v.Local.sHold,=,"")
+'	F.Intrinsic.UI.Msgbox("Please contact Global Shop to assign Batch number. Cannot find the next Batch number starting with H.")	
+'	f.ODBC.Connection!conx.Close
+'	f.Intrinsic.Control.End
+'f.Intrinsic.Control.ElseIf(v.Local.sHold.Trim,<,"94")	
+'	v.Local.iBatch.Set(240)
+'	f.Intrinsic.String.LPad(v.Local.iBatch,"0",4,v.Local.sHold)
+'	f.Intrinsic.String.Concat("H",v.Local.sHold,v.Global.sBatchNum)		
+'f.Intrinsic.Control.ElseIf(v.Local.sHold.Trim,=,"9999")
+'	f.Intrinsic.UI.Msgbox("Please contact Global Shop for assistant","Running out of BatchNumber")
+'	f.ODBC.Connection!conx.Close
+'	f.Intrinsic.Control.End
+'f.Intrinsic.Control.Else
+'	f.Intrinsic.Math.Add(v.Local.sHold,1,v.Local.iBatch)
+'	f.Intrinsic.String.LPad(v.Local.iBatch,"0",4,v.Local.sHold)
+'	f.Intrinsic.String.Concat("H",v.Local.sHold,v.Global.sBatchNum)
+'f.Intrinsic.Control.EndIf
+
+
+
+gui.SelectFile..Show
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.Browse_File.Start
+F.Intrinsic.Control.SetErrorHandler("Select_Upload_File_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sFileExcel)
+
+F.Intrinsic.UI.ShowOpenFileDialog("","xls|*.xls*",V.Local.sFileExcel)
+F.Intrinsic.Control.If(V.Local.sFileExcel,=,"***CANCEL***")
+	F.Intrinsic.UI.Msgbox("No File Was Selected")
+	F.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+gui.SelectFile.txtOriginalFilePath.Text(v.Local.sFileExcel)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Select_Upload_File_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Browse_File.End
+
+Program.Sub.OK_Click.Start
+F.Intrinsic.Control.SetErrorHandler("OK_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+v.Local.bNumeric.Declare(boolean)
+
+'Click Ok will upload data from Excel spreadsheet to a Data Table bind to a GridView to validate data before really upload to AR_Open_Items and GL_Detail
+f.Intrinsic.Math.IsNumeric(v.Screen.SelectFile!txtMaxOfLines.Text.Trim,v.Local.bNumeric)
+f.Intrinsic.Control.If(v.Local.bNumeric,=,False)
+	f.Intrinsic.UI.Msgbox("Max of Lines must be integer","Invalid data")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+gui.SelectFile..Visible(False)
+f.Intrinsic.Control.CallSub(Bind_Table_To_View)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("OK_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.OK_Click.End
+
+Program.Sub.Bind_Table_To_View.Start
+F.Intrinsic.Control.SetErrorHandler("Bind_Table_To_View_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sSQL, sInputString, sHeader, sDataType, sToValidateString, sTotalRowIndex)
+v.Local..BulkDeclareLong(iCounter, iMaxOfLines)
+v.Local..BulkDeclareBoolean(bIsNumeric)
+
+'Read Excel spreadsheet
+v.Local.iMaxOfLines.Set(v.Screen.SelectFile!txtMaxOfLines.Text.Trim)
+Function.Automation.MSExcel.ReadSpreadsheet(v.Screen.SelectFile!txtOriginalFilePath.Text.Trim,20,v.Local.iMaxOfLines,v.Local.sInputString)
+f.Intrinsic.String.Split(v.Local.sInputString,"$!$",v.Local.sInputString)
+f.Intrinsic.Control.If(v.Local.sInputString.UBound,<,1,or,v.Local.sInputString(1),=,"*!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!*")
+	f.Intrinsic.UI.Msgbox("Empty data","Process excel file")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+'If a line is completely empty, quit the reading. So the input excel file should not have an empty line in between
+'Set the first row
+v.Local.sToValidateString.Set(v.Local.sInputString(1))
+
+'Continue to concatenate the next rows
+f.Intrinsic.Control.If(v.Local.sInputString.UBound,>,1)
+	f.Intrinsic.Control.For(v.Local.iCounter,2,v.Local.sInputString.UBound,1)
+		f.Intrinsic.Control.If(v.Local.sInputString(v.Local.iCounter),=,"*!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!**!*")
+			f.Intrinsic.Control.ExitFor(v.Local.iCounter)
+		f.Intrinsic.Control.EndIf	
+		f.Intrinsic.String.Concat(v.Local.sToValidateString,"$!$",v.Local.sInputString(v.Local.iCounter),v.Local.sToValidateString)
+	f.Intrinsic.Control.Next(v.Local.iCounter)
+f.Intrinsic.Control.EndIf
+
+'Put data from Excel file to Data Table
+v.Local.sHeader.Set("SenderId*!*ReceiverId*!*FileCreationDate*!*FileCreationTime*!*PayerCompanyName*!*PayerId*!*CheckOrEffectiveDate*!*CheckNumber*!*CheckAmount*!*InvoiceNumber*!*InvoiceDate*!*ReferenceNumber*!*VoucherNumber*!*VoucherDueDate*!*Description*!*GrossAmount*!*DiscountAmount*!*AdjustedAmount*!*NetAmount*!*Comments")
+v.Local.sDataType.Set("String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String*!*String")
+f.Intrinsic.Control.If(v.DataTable.AR.Exists,=,True)
+	f.Data.DataTable.Close("AR")
+f.Intrinsic.Control.EndIf
+
+'Exclude the Total row
+F.Data.DataTable.CreateFromString("AR", V.Local.sToValidateString,v.Local.sHeader,v.Local.sDataType,"*!*","$!$", TRUE)
+f.Data.DataTable.AddColumn("AR","Status","string","Good")
+Function.Data.DataTable.Select("AR", "InvoiceNumber = 'Totals'", v.Local.sTotalRowIndex)
+f.Intrinsic.Control.If(v.Local.sTotalRowIndex,<>,"***NORETURN***")
+	f.Data.DataTable.DeleteRow("AR",v.Local.sTotalRowIndex)
+F.Intrinsic.Control.EndIf
+
+'Check numeric value for 3 columns here CheckAmount, Gross, Net, Discount before converting to float
+v.Local.bExit.Declare(boolean)
+f.Intrinsic.Control.For(v.Local.iCounter,0,v.DataTable.AR.RowCount--,1)	
+              
+	f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Local.iCounter).CheckAmount!FieldValTrim,v.Local.bIsNumeric)
+	f.Intrinsic.Control.If(v.Local.bIsNumeric,=,False)
+		v.Local.bExit.Set(True)
+	f.Intrinsic.Control.EndIf
+		 
+	f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Local.iCounter).GrossAmount!FieldValTrim,v.Local.bIsNumeric)
+	f.Intrinsic.Control.If(v.Local.bIsNumeric,=,False)
+		v.Local.bExit.Set(True)
+	f.Intrinsic.Control.EndIf	
+		
+	f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Local.iCounter).DiscountAmount!FieldValTrim,v.Local.bIsNumeric)
+	f.Intrinsic.Control.If(v.Local.bIsNumeric,=,False)
+		v.Local.bExit.Set(True)
+	f.Intrinsic.Control.EndIf
+	
+	f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Local.iCounter).NetAmount!FieldValTrim,v.Local.bIsNumeric)
+	f.Intrinsic.Control.If(v.Local.bIsNumeric,=,False)
+		v.Local.bExit.Set(True)
+	f.Intrinsic.Control.EndIf
+		
+f.Intrinsic.Control.Next(v.Local.iCounter)
+
+f.Intrinsic.Control.If(v.Local.bExit,=,True)
+	f.Intrinsic.UI.Msgbox("Some value is not numeric, please correct","Invalid data")
+	f.Intrinsic.Control.ExitSub
+f.Intrinsic.Control.EndIf
+
+'Convert string columns to numeric columns for later calculation
+f.Data.DataTable.AddExpressionColumn("AR","FGross",float,"GrossAmount")
+f.Data.DataTable.AddExpressionColumn("AR","FNet",float,"NetAmount")
+f.Data.DataTable.AddExpressionColumn("AR","FDiscount",float,"DiscountAmount")
+f.Data.DataTable.AddColumn("AR","BatchNum",string,v.Global.sBatchNum)
+gui.FORM.gs.AddGridviewFromDatatable("GV","AR")
+gui.FORM.lblTotalRow.Text(v.DataTable.AR.RowCount)
+
+gui.Progress..Show
+gui.Progress.proBar.Max(v.DataTable.AR.RowCount)
+
+'Scan error for each row
+f.Intrinsic.Control.For(v.Local.iCounter,0,v.DataTable.AR.RowCount--,1)
+	gui.Progress.proBar.Value(v.Local.iCounter)
+	F.Intrinsic.Control.CallSub(check_row,"RowNum",v.Local.iCounter)
+f.Intrinsic.Control.Next(v.Local.iCounter)
+
+gui.Progress..Visible(False)
+f.Intrinsic.Control.CallSub(format_gv)
+f.Intrinsic.Control.CallSub(error_count)
+f.Intrinsic.Control.CallSub(Calculate_Total)
+
+gui.FORM.gs.MainView("GV")
+gui.FORM..Show
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Bind_Table_To_View_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Bind_Table_To_View.End
+
+Program.Sub.Error_Count.Start
+F.Intrinsic.Control.SetErrorHandler("Error_Count_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+f.Intrinsic.Control.If(V.DataView.AR!AR_DTV.Exists,=,true)	
+	Function.Data.DataView.Close("AR", "AR_DTV")
+f.Intrinsic.Control.endif
+
+Function.Data.DataView.Create("AR","AR_DTV", 22,"Status = 'Error'", "")
+gui.FORM.lblErrorCount.Text(V.DataView.AR!AR_DTV.RowCount)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Error_Count_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Error_Count.End
+
+Program.Sub.Calculate_Total.Start
+F.Intrinsic.Control.SetErrorHandler("Calculate_Total_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareFloat(fTotalGrossAmount, fTotalDiscountAmount, fTotalNetAmount, fSum)
+v.Local..BulkDeclareString(sError, sSum)
+
+F.Data.DataTable.Compute("AR", "Sum(FGross)","",v.Local.fTotalGrossAmount)
+F.Data.DataTable.Compute("AR", "Sum(FDiscount)","",v.Local.fTotalDiscountAmount)
+F.Data.DataTable.Compute("AR", "Sum(FNet)","",v.Local.fTotalNetAmount)
+gui.FORM.lblTotalGrossAmount.Text(v.Local.fTotalGrossAmount)
+gui.FORM.lblTotalDiscountAmount.Text(v.Local.fTotalDiscountAmount)
+gui.FORM.lblTotalNetAmount.Text(v.Local.fTotalNetAmount)
+
+f.Intrinsic.Math.Add(v.Local.fTotalNetAmount,v.Local.fTotalDiscountAmount,v.Local.fSum)
+v.Local.sSum.Set(v.Local.fSum)
+f.Intrinsic.Control.If(v.Screen.FORM!lblTotalGrossAmount.Text.Trim,<>,v.Local.sSum.Trim)
+	gui.FORM.lblEqual.Text("!=")	
+	gui.FORM.lblEqual.ForeColor(v.Color.LtRed)
+f.Intrinsic.Control.Else
+	gui.FORM.lblEqual.Text("=")	
+	gui.FORM.lblEqual.ForeColor(v.Color.Black)
+F.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Calculate_Total_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Calculate_Total.End
+
+Program.Sub.gs_CellValueChanged.Start
+F.Intrinsic.Control.SetErrorHandler("gs_CellValueChanged_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sIndex)
+
+Gui.Form.Gs.GetSelectedRowsInFocus(v.Local.sIndex)
+f.Intrinsic.Control.CallSub(check_row,"RowNum",v.Local.sIndex)
+F.Intrinsic.Control.CallSub(error_count)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("gs_CellValueChanged_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.gs_CellValueChanged.End
+
+Program.Sub.Check_Row.Start
+F.Intrinsic.Control.SetErrorHandler("Check_Row_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sSQL, sRet, sHold, sHold2, sCustomer, sNameCustomer, sInvoiceNumber, sCompare1, sCompare2)
+v.Local..BulkDeclareBoolean(bGoodData, bGoodCheckAmt, bGoodInvoiceNum, bGoodInvoiceDate, bGoodGrossAmt, bGoodDiscountAmt, bGoodNetAmt, bIsDate, bIsNumeric)
+v.Local.dHold.Declare(Date)
+v.Local..BulkDeclareFloat(fGross,fDiscount,fNet,fHold,fHold2)
+
+'Validation the critical columns
+v.Local.bGoodData.Set(true)
+v.Local.bGoodInvoiceNum.Set(true)
+v.Local.bGoodInvoiceDate.Set(true)
+v.Local.bGoodCheckAmt.Set(true)
+v.Local.bGoodGrossAmt.Set(true)
+v.Local.bGoodDiscountAmt.Set(true)
+v.Local.bGoodNetAmt.Set(true)	
+
+'Check Customer col(5)
+f.Intrinsic.String.Build("Select Customer from V_Customer_master where ltrim(rtrim(Customer)) = '{0}'",v.DataTable.AR(v.Args.RowNum).PayerID!FieldValTrim,v.Local.sSQL)	
+f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sCustomer)
+f.Intrinsic.Control.If(v.Local.sCustomer,=,"")
+	v.Local.bGoodData.Set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",5,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",5,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+
+'Set Customer Name
+f.Intrinsic.String.Build("Select Name_Customer from V_Customer_Master where ltrim(rtrim(Customer)) = '{0}' and Rec = '1'",v.DataTable.AR(v.Args.RowNum).PayerID!FieldValTrim,v.Local.sSQL)	
+f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sNameCustomer)
+f.Data.DataTable.SetValue("AR",v.Args.RowNum,"PayerCompanyName",v.Local.sNameCustomer)	
+
+'Effective Date col(6) must be YYMMDD
+f.Intrinsic.Control.If(v.DataTable.AR(v.Args.RowNum).CheckOrEffectiveDate!FieldValTrim,=,"")
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+'Length of Effective Date must be 6
+v.Local.sHold.Set(v.DataTable.AR(v.Args.RowNum).CheckOrEffectiveDate!FieldValTrim)
+f.Intrinsic.Control.If(v.Local.sHold.Length,<>,6)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	'Ok Now Length is 6
+	f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Args.RowNum).CheckOrEffectiveDate!FieldValTrim,v.Local.bIsNumeric)
+	f.Intrinsic.Control.If(v.Local.bIsNumeric,=,False)
+		v.local.bGoodData.set(False)
+		Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+	f.Intrinsic.Control.Else
+		'Ok Now Length is 6 and numeric. Check isDate
+		f.Intrinsic.String.Mid(v.Local.sHold,3,2,v.Local.sHold2)
+		f.Intrinsic.String.Concat(v.Local.sHold2,"/",v.Local.sHold.Right2,"/20",v.Local.sHold.Left2,v.Local.sHold)
+		f.Intrinsic.Date.IsDate(v.Local.sHold,v.Local.bIsDate)
+		f.Intrinsic.Control.If(v.Local.bIsDate,=,False)
+			v.local.bGoodData.set(False)
+			Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+		f.Intrinsic.Control.Else
+			Gui.Form.Gs.SetCellAppearance("GV",6,v.Args.RowNum,"BackColor","NON")
+		F.Intrinsic.Control.EndIf	
+	F.Intrinsic.Control.EndIf
+F.Intrinsic.Control.EndIf
+
+'Check Check Number col(7) must not be blank
+f.Intrinsic.Control.If(v.DataTable.AR(v.Args.RowNum).CheckNumber!FieldValTrim,=,"")
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",7,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",7,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+
+'Check Check Amount col(8) must be numeric              
+f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Args.RowNum).CheckAmount!FieldValTrim,v.Local.bGoodCheckAmt)
+f.Intrinsic.Control.If(v.Local.bGoodCheckAmt,=,False)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",8,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",8,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf	
+	
+'Check Gross Amount col(15) must be numeric     
+f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Args.RowNum).GrossAmount!FieldValTrim,v.Local.bGoodGrossAmt)
+f.Intrinsic.Control.If(v.Local.bGoodGrossAmt,=,False)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",15,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",15,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+
+'Check Invoice Number col(9) SHOULD CHECK WITH CUSTOMER WHAT IS THE INVOICE FORMAT AND WHAT IS THE INPUT DATA FORMAT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+f.Intrinsic.String.LPad(v.DataTable.AR(v.Args.RowNum).InvoiceNumber!FieldValTrim,"0",6,v.Local.sInvoiceNumber)
+'v.Local.sInvoiceNumber.Set(v.DataTable.AR(v.Args.RowNum).InvoiceNumber!FieldValTrim)
+
+f.Data.DataTable.SetValue("AR",v.Args.RowNum,"InvoiceNumber",v.Local.sInvoiceNumber)
+
+f.Intrinsic.String.Build("Select Top 1 AMT_Invoice from v_AR_Open_Items where Customer = '{0}' and Invoice = '{1}' and Batch_Code = '10'",v.Local.sCustomer,v.Local.sInvoiceNumber,v.Local.sSQL)
+f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+f.Intrinsic.Control.If(v.Local.sRet,=,"")
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",9,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.If(v.Local.bGoodGrossAmt,=,True)
+		v.Local.fHold.Set(v.Local.sRet)
+		v.Local.fHold2.Set(v.DataTable.AR(v.Args.RowNum).GrossAmount!FieldValTrim)
+		f.Intrinsic.Control.If(v.Local.fHold,<,v.Local.fHold2)
+			Gui.Form.Gs.SetCellAppearance("GV",15,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+		f.Intrinsic.Control.Else
+			Gui.Form.Gs.SetCellAppearance("GV",15,v.Args.RowNum,"BackColor","NON")
+		f.Intrinsic.Control.EndIf		
+	f.Intrinsic.Control.EndIf
+	Gui.Form.Gs.SetCellAppearance("GV",9,v.Args.RowNum,"BackColor","NON")	
+F.Intrinsic.Control.EndIf	
+
+'Check Invoice Date col(10)
+f.Intrinsic.Date.IsDate(v.DataTable.AR(v.Args.RowNum).InvoiceDate!FieldValTrim,v.Local.bGoodInvoiceDate)
+f.Intrinsic.Control.If(v.Local.bGoodInvoiceDate,=,False)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",10,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	'OK Now InvoiceDate isDate. Check if the date is the one in AR_Open_Items
+	f.Intrinsic.String.Split(v.DataTable.AR(v.Args.RowNum).InvoiceDate!FieldValTrim," ",v.Local.sHold)
+	f.Data.DataTable.SetValue("AR",v.Args.RowNum,"InvoiceDate",v.Local.sHold(0))
+	f.Intrinsic.String.Build("Select Top 1 Invoice from v_AR_Open_Items where Customer = '{0}' and Invoice = '{1}' and Batch_Code = '10' and Date_Invoice = '{2}'",v.Local.sCustomer,v.Local.sInvoiceNumber,v.Local.sHold(0).PervasiveDate,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet,=,0)
+		v.local.bGoodData.set(False)
+		Gui.Form.Gs.SetCellAppearance("GV",10,v.Args.RowNum,"BackColor",v.Color.LtGreen)
+	f.Intrinsic.Control.Else
+		Gui.Form.Gs.SetCellAppearance("GV",10,v.Args.RowNum,"BackColor","NON")
+	f.Intrinsic.Control.EndIf
+f.Intrinsic.Control.EndIf
+
+'Check Discount Amount col(16) must be numeric
+f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Args.RowNum).DiscountAmount!FieldValTrim,v.Local.bGoodDiscountAmt)
+f.Intrinsic.Control.If(v.Local.bGoodDiscountAmt,=,False)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",16,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",16,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+
+'Check Net Amount col(18) must be numeric
+f.Intrinsic.Math.IsNumeric(v.DataTable.AR(v.Args.RowNum).NetAmount!FieldValTrim,v.Local.bGoodNetAmt)
+f.Intrinsic.Control.If(v.Local.bGoodNetAmt,=,False)
+	v.local.bGoodData.set(False)
+	Gui.Form.Gs.SetCellAppearance("GV",18,v.Args.RowNum,"BackColor",v.Color.SEC-GSS-06)
+f.Intrinsic.Control.Else
+	Gui.Form.Gs.SetCellAppearance("GV",18,v.Args.RowNum,"BackColor","NON")
+F.Intrinsic.Control.EndIf
+
+f.Intrinsic.Control.If(v.Local.bGoodData,=,False)
+	f.Data.DataTable.SetValue("AR",v.Args.RowNum,"Status","Error")
+f.Intrinsic.Control.Else
+	f.Data.DataTable.SetValue("AR",v.Args.RowNum,"Status","Good")
+f.Intrinsic.Control.EndIf
+
+'Check Equal of the underlined line: Gross = Net + Discount
+F.Intrinsic.Control.If(v.Local.bGoodGrossAmt,=,True,and,v.Local.bGoodNetAmt,=,True)
+	f.Intrinsic.Control.If(v.Local.bGoodDiscountAmt,=,True)
+	
+		v.Local.fGross.Set(v.DataTable.AR(v.Args.RowNum).GrossAmount!FieldValTrim)
+		v.Local.fDiscount.Set(v.DataTable.AR(v.Args.RowNum).DiscountAmount!FieldValTrim)
+		v.Local.fNet.Set(v.DataTable.AR(v.Args.RowNum).NetAmount!FieldValTrim)
+		f.Intrinsic.Math.Add(v.Local.fNet,v.Local.fDiscount,v.Local.fHold)
+		f.Intrinsic.String.Format(v.Local.fHold,"0.00",v.Local.sCompare1)
+		f.Intrinsic.String.Format(v.Local.fGross,"0.00",v.Local.sCompare2)
+		'If Gross <> Net + Discount
+		f.Intrinsic.Control.If(v.Local.sCompare1,<>,v.Local.sCompare2)
+			f.Data.DataTable.SetValue("AR",v.Args.RowNum,"Status","Error")
+		f.Intrinsic.Control.EndIf
+		
+		'Discount must be positive
+		f.Intrinsic.Control.If(v.Local.fDiscount,<,0)
+			f.Data.DataTable.SetValue("AR",v.Args.RowNum,"Status","Error")
+		f.Intrinsic.Control.EndIf
+				
+		'If Gross or Net are negative, Discount must be 0
+		f.Intrinsic.Control.If(v.Local.fGross,<,0,or,v.Local.fNet,<,0)
+			f.Intrinsic.Control.If(v.Local.fDiscount,<>,0)
+				f.Data.DataTable.SetValue("AR",v.Args.RowNum,"Status","Error")
+			f.Intrinsic.Control.EndIf
+		f.Intrinsic.Control.EndIf
+					
+	f.Intrinsic.Control.EndIf	
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Check_Row_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Check_Row.End
+
+Program.Sub.cmdUpload_Click.Start
+F.Intrinsic.Control.SetErrorHandler("cmdUpload_Click_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+'Still check Grand Total before processing
+f.Intrinsic.Control.CallSub(error_count)
+f.Intrinsic.Control.If(v.Screen.FORM!lblErrorCount.Text,=,"0")
+	f.Intrinsic.Control.CallSub(process_file)
+f.Intrinsic.Control.Else
+	f.Intrinsic.Control.CallSub(calculate_total)
+	f.Intrinsic.UI.Msgbox("There are still some rows with error to be modified. Please modify")
+f.Intrinsic.Control.EndIf
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("cmdUpload_Click_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.cmdUpload_Click.End
+
+Program.Sub.Process_File.Start
+F.Intrinsic.Control.SetErrorHandler("Process_File_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sSQL, sMap, sNowYYYYMMDD, sNowHhNnSs00, sRet, sFile, sHold, sCreditNetAmountLine,sCreditDiscountAmountLine, sOITLine, sOpenItemText, sNotEqualCheckAmountCustomer, sGL_DiscountBatchLines)
+v.Local..BulkDeclareString(sGLDetailText, sInvoiceGLDate, sInvoiceGLDueDate)
+v.Local..BulkDeclareString(sCashAcct, sDiscountGL, sAcctRecvGL, sCheckPerCustomer, sTotalAllCheck)
+v.Local..BulkDeclareString(sPostDate,sFinalizeProgramPath,sSwitches)
+v.Local..BulkDeclareString(sTotalNetAmount, sTotalGrossAmount, sTotalDiscountAmount)
+v.Local..BulkDeclareLong(iCounter, iCnt, iCnt2, iLine, iLineGL,iPIDReturn)
+v.Local..BulkDeclareFloat(fSumNetAmt,fCheckAmt,fCreditNetAmountLine,fCreditDiscountAmountLine)
+
+F.Intrinsic.String.Format(V.Ambient.Date,"YYYYMMDD",v.Local.sNowYYYYMMDD)
+'Set GL account based on Company Code
+F.Intrinsic.Control.If(V.Ambient.PDSN.Trim,=,"GLOBAL_BAO")
+	v.Local.sCashAcct.Set("100")
+	v.Local.sDiscountGL.Set("411")
+	v.Local.sAcctRecvGL.Set("110")
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_CRD")
+	'Cash Account
+	v.Local.sCashAcct.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110000")	
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_BRD")
+	'Cash Account
+	v.Local.sCashAcct.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110001")	
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_PLA")
+	'Cash Account
+	v.Local.sCashAcct.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110001")
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_TST")
+	'Distinct gl_number in TST: 1010000, 4110000, 1130000, 1020000
+	'Cash Account
+	v.Local.sCashAcct.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110000")
+f.Intrinsic.Control.Else
+	f.Intrinsic.UI.Msgbox("Please set up GL accounts per company")
+	f.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+
+f.Intrinsic.String.Build("Delete from GCG_4676_To_Upload where BatchNum = '{0}'",v.Global.sBatchNum,v.Local.sSQL)
+f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+
+'Save to DBase
+v.Local.sMap.Set("PayerID@!@Customer*!*PayerCompanyName@!@Name_Customer*!*CheckOrEffectiveDate@!@CheckOrEffectiveDate*!*CheckNumber@!@CheckNumber*!*CheckAmount@!@CheckAmount*!*InvoiceNumber@!@InvoiceNumber*!*InvoiceDate@!@InvoiceDate*!*GrossAmount@!@GrossAmount*!*DiscountAmount@!@DiscountAmount*!*NetAmount@!@NetAmount*!*FDiscount@!@DiscountAmtNumeric*!*BatchNum@!@BatchNum*!*FNet@!@NetAmtNumeric*!*FGross@!@GrossAmtNumeric")	
+F.Data.DataTable.SaveToDB("AR","conx","GCG_4676_To_Upload","",128,v.Local.sMap)
+
+'Still validate Check Amount equal to sum(NetAmtNumeric) for each group (header) of Customer, CheckNumber, CheckAmount
+f.Intrinsic.String.Build("Select Distinct Customer, CheckNumber, CheckAmount from GCG_4676_To_Upload where BatchNum = '{0}'",v.Global.sBatchNum,v.Local.sSQL)
+f.ODBC.Connection!conx.OpenRecordsetRO("rst",v.Local.sSQL)
+F.Intrinsic.Control.DoUntil(v.ODBC.Conx!rst.EOF,=,True)
+	f.Intrinsic.String.Build("Select Sum(NetAmtNumeric) from GCG_4676_To_Upload where Customer = '{0}' and CheckNumber = '{1}' and CheckAmount = '{2}' and BatchNum = '{3}'",v.ODBC.Conx!rst.FieldValString!Customer,v.ODBC.Conx!rst.FieldValString!CheckNumber,v.ODBC.Conx!rst.FieldValString!CheckAmount,v.Global.sBatchNum,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.fSumNetAmt)
+	v.Local.fCheckAmt.Set(v.ODBC.Conx!rst.FieldValString!CheckAmount)
+	f.Intrinsic.Control.If(v.Local.fCheckAmt,<>,v.Local.fSumNetAmt)
+		f.Intrinsic.String.Concat(v.Local.sNotEqualCheckAmountCustomer,"Customer: ",v.ODBC.Conx!rst.FieldValString!Customer," Check number: ",v.ODBC.Conx!rst.FieldValString!CheckNumber," Check amount: ",v.ODBC.Conx!rst.FieldValString!CheckAmount,v.Ambient.NewLine,v.Local.sNotEqualCheckAmountCustomer)
+	f.Intrinsic.Control.EndIf
+	F.ODBC.Conx!rst.Movenext
+F.Intrinsic.Control.Loop
+f.ODBC.conx!rst.Close
+
+f.Intrinsic.Control.If(v.Local.sNotEqualCheckAmountCustomer,<>,"")
+	f.Intrinsic.String.Concat("Please verify Check Amount for these Customers: ",v.Ambient.NewLine,v.Local.sNotEqualCheckAmountCustomer,v.Local.sHold)
+	f.Intrinsic.UI.Msgbox(v.Local.sHold,"Invalid Check Amount")
+	f.Intrinsic.Control.ExitSub	
+f.Intrinsic.Control.EndIf
+
+'NOW DATA IS ALL GOOD, READY TO BE UPLOADED =======================================================================================================================================================================================
+f.Intrinsic.UI.InvokeWaitDialog("Uploading...")
+
+f.Intrinsic.Control.If(v.DataTable.Cust_CheckAmount.Exists,=,True)
+	f.Data.DataTable.Close("Cust_CheckAmount")
+f.Intrinsic.Control.EndIf
+
+f.Data.DataTable.Create("Cust_CheckAmount",true)
+f.Data.DataTable.AddColumn("Cust_CheckAmount","Customer",STRING,"")
+f.Data.DataTable.AddColumn("Cust_CheckAmount","CheckNumber",STRING,"")
+f.Data.DataTable.AddColumn("Cust_CheckAmount","CheckAmount",STRING,"")
+
+'Base on the Batch num
+'For each group (Customer, CheckNumber, CheckAmount), do the upload
+f.Intrinsic.String.Build("Select Distinct Customer, CheckNumber, CheckAmount from GCG_4676_To_Upload where BatchNum = '{0}' Order By AutoNum",v.Global.sBatchNum,v.Local.sSQL)	
+f.ODBC.Connection!conx.OpenRecordsetRO("rst",v.Local.sSQL)
+F.Intrinsic.Control.DoUntil(v.ODBC.Conx!rst.EOF,=,True)
+	'This table AR_Cust contains data for each group (Customer, CheckNumber, CheckAmount) to be uploaded
+	f.Intrinsic.Control.If(v.DataTable.AR_Cust.Exists,=,True)
+		f.Data.DataTable.Close("AR_Cust")
+	f.Intrinsic.Control.EndIf
+	'Bind datatable AR_Cust
+	f.Intrinsic.String.Build("Select Customer, Name_Customer, CheckOrEffectiveDate, CheckNumber, CheckAmount, InvoiceNumber, InvoiceDate, GrossAmount, DiscountAmount, NetAmount, Now() as DateTimeExcel, DiscountAmtNumeric, BatchNum, NetAmtNumeric, GrossAmtNumeric from GCG_4676_To_UpLoad where Customer = '{0}' and CheckNumber = '{1}' and CheckAmount = '{2}' and BatchNum = '{3}' order by AutoNum",v.ODBC.Conx!rst.FieldValString!Customer,v.ODBC.Conx!rst.FieldValString!CheckNumber,v.ODBC.Conx!rst.FieldValString!CheckAmount,v.Global.sBatchNum, v.Local.sSQL)
+	f.Data.DataTable.CreateFromSQL("AR_Cust","conx",v.Local.sSQL,True)
+	
+	f.Intrinsic.String.Build("Select sum(NetAmtNumeric), sum(DiscountAmtNumeric), sum(GrossAmtNumeric) from GCG_4676_to_upload where Customer = '{0}' and CheckNumber = '{1}' and CheckAmount = '{2}' and BatchNum = '{3}'",v.ODBC.Conx!rst.FieldValString!Customer,v.ODBC.Conx!rst.FieldValString!CheckNumber,v.ODBC.Conx!rst.FieldValString!CheckAmount,v.Global.sBatchNum, v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sHold)
+	f.Intrinsic.String.Split(v.Local.sHold,"*!*",v.Local.sHold)
+	v.Local.sTotalNetAmount.Set(v.Local.sHold(0))
+	v.Local.sTotalDiscountAmount.Set(v.Local.sHold(1))
+	v.Local.sTotalGrossAmount.Set(v.Local.sHold(2))
+	'AddRow to datatable Cust_CheckAmount to store the group header in order to update later, because the AR_Cust will be closed in each loop
+	'AddRow will reflect what group is already processed, whereas if using CreateFromSQL will not
+	f.Data.DataTable.AddRow("Cust_CheckAmount","Customer",v.ODBC.Conx!rst.FieldValString!Customer,"CheckNumber",v.ODBC.Conx!rst.FieldValString!CheckNumber,"CheckAmount",v.ODBC.Conx!rst.FieldValString!CheckAmount)
+	
+	'Line 1 Debit CASH account
+	f.Intrinsic.Math.Add(v.Local.iLineGL,1,v.Local.iLineGL)
+	f.Intrinsic.Control.Callsub(Generate_gl_detail_line,"sGL_CashGLAccount",v.local.sCashAcct,"sGL_BatchNum",v.Global.sBatchNum,"iGL_BatchLine",v.Local.iLineGL,"sGL_Reference",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sGL_Amount",v.Local.sTotalNetAmount,"sGL_Desc",v.DataTable.AR_Cust(0).Name_Customer!FieldValTrim,"sGL_TransCode","11","sGL_Cust",v.DataTable.AR_Cust(0).Customer!FieldValTrim,"sGL_InvoiceNum","DEBIT","sGL_InvoiceDate",v.Local.sNowYYYYMMDD,"sGL_InvoiceDueDate","","sGL_CheckNumber",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sCheckDate",v.DataTable.AR_Cust(0).CheckOrEffectiveDate!FieldValTrim,"sCheckGrossAmount",v.local.sTotalGrossAmount,"sCheckDiscountAmount",v.Local.sTotalDiscountAmount,"sCheckNetAmount",v.Local.sTotalNetAmount)
+	F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sGLDetailText,v.Args.sGL_Line_Generated,V.Ambient.NewLine,V.Local.sGLDetailText)		
+	
+	'Line 2 Debit SALES DISCOUNT account
+	f.Intrinsic.Math.Add(v.Local.iLineGL,1,v.Local.iLineGL)	
+	f.Intrinsic.Control.Callsub(Generate_gl_detail_line,"sGL_CashGLAccount",v.local.sDiscountGL,"sGL_BatchNum",v.Global.sBatchNum,"iGL_BatchLine",v.local.iLineGL,"sGL_Reference",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sGL_Amount",v.local.sTotalDiscountAmount,"sGL_Desc",v.DataTable.AR_Cust(0).Name_Customer!FieldValTrim,"sGL_TransCode","11","sGL_Cust",v.DataTable.AR_Cust(0).Customer!FieldValTrim,"sGL_InvoiceNum","DEBIT","sGL_InvoiceDate",v.Local.sNowYYYYMMDD,"sGL_InvoiceDueDate","","sGL_CheckNumber",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sCheckDate",v.DataTable.AR_Cust(0).CheckOrEffectiveDate!FieldValTrim,"sCheckGrossAmount",v.local.sTotalGrossAmount,"sCheckDiscountAmount",v.Local.sTotalDiscountAmount,"sCheckNetAmount",v.Local.sTotalNetAmount)
+	F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sGLDetailText,v.Args.sGL_Line_Generated,V.Ambient.NewLine,V.Local.sGLDetailText)		
+	
+	'iLine is for AR_Open_Items will start from 3
+	v.Local.iLine.Set(v.Local.iLineGL)
+	
+	f.Intrinsic.Control.For(v.Local.iCounter,0,v.DataTable.AR_Cust.RowCount--,1)
+		'For GL_Line
+		'Invoice Date CCYYMMDD  8		
+		f.Intrinsic.String.Split(v.DataTable.AR_Cust(v.Local.iCounter).InvoiceDate!FieldValTrim,"/",v.Local.sHold)
+		f.Intrinsic.String.LPad(v.Local.sHold(0),"0",2,v.Local.sHold(0))
+		f.Intrinsic.String.LPad(v.Local.sHold(1),"0",2,v.Local.sHold(1))
+		f.Intrinsic.String.Concat(v.Local.sHold(2),v.Local.sHold(0),v.Local.sHold(1),v.Local.sInvoiceGLDate)
+		'Invoice Due Date CCYYMMDD  8
+		f.Intrinsic.String.Build("Select Top 1 Due_Date from AR_Open_Items where Invoice = '{0}' and Batch_Code = '10'",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceNumber!FieldValTrim,v.Local.sSQL)
+		'The return date from this SQL is CCYYMMDD
+		f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sInvoiceGLDueDate)
+	
+		'For GL Detail Credit Line
+		'GL Detail Credit Account Receivable, for Invoice NetAmount
+		f.Intrinsic.Math.Add(v.Local.iLineGL,1,v.Local.iLineGL)		
+		v.Local.fCreditNetAmountLine.Set(v.DataTable.AR_Cust(v.Local.iCounter).NetAmount!FieldValTrim)
+		'Reverse the sign of the NetAmount
+		f.Intrinsic.Math.Sub(0,v.Local.fCreditNetAmountLine,v.Local.fCreditNetAmountLine)
+		f.Intrinsic.Control.Callsub(Generate_gl_detail_line,"sGL_CashGLAccount",v.local.sAcctRecvGL,"sGL_BatchNum",v.Global.sBatchNum,"iGL_BatchLine",v.Local.iLineGL,"sGL_Reference",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sGL_Amount",V.Local.fCreditNetAmountLine,"sGL_Desc",v.DataTable.AR_Cust(0).Name_Customer!FieldValTrim,"sGL_TransCode","11","sGL_Cust",v.DataTable.AR_Cust(0).Customer!FieldValTrim,"sGL_InvoiceNum",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceNumber!FieldValTrim,"sGL_InvoiceDate",v.Local.sInvoiceGLDate,"sGL_InvoiceDueDate",v.Local.sInvoiceGLDueDate,"sGL_CheckNumber",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sCheckDate",v.DataTable.AR_Cust(0).CheckOrEffectiveDate!FieldValTrim,"sCheckGrossAmount",v.Local.sTotalGrossAmount,"sCheckDiscountAmount",v.Local.sTotalDiscountAmount,"sCheckNetAmount",v.Local.sTotalNetAmount)
+		F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sGLDetailText,v.Args.sGL_Line_Generated,V.Ambient.NewLine,V.Local.sGLDetailText)
+
+		'GL Detail credit account Receivable, for Sales Discount
+		v.Local.fCreditDiscountAmountLine.Set(v.DataTable.AR_Cust(v.Local.iCounter).DiscountAmount!FieldValTrim)
+		'Only do the discount when discount amount <> 0
+		f.Intrinsic.Control.If(v.Local.fCreditDiscountAmountLine,<>,0)		
+			f.Intrinsic.Math.Add(v.Local.iLineGL,1,v.Local.iLineGL)
+			f.Intrinsic.Math.Sub(0,v.Local.fCreditDiscountAmountLine,v.Local.fCreditDiscountAmountLine)		
+			f.Intrinsic.Control.Callsub(Generate_gl_detail_line,"sGL_CashGLAccount",v.local.sAcctRecvGL,"sGL_BatchNum",v.Global.sBatchNum,"iGL_BatchLine",v.Local.iLineGL,"sGL_Reference",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sGL_Amount",V.Local.fCreditDiscountAmountLine,"sGL_Desc",v.DataTable.AR_Cust(0).Name_Customer!FieldValTrim,"sGL_TransCode","11","sGL_Cust",v.DataTable.AR_Cust(0).Customer!FieldValTrim,"sGL_InvoiceNum",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceNumber!FieldValTrim,"sGL_InvoiceDate",v.Local.sInvoiceGLDate,"sGL_InvoiceDueDate",v.Local.sInvoiceGLDueDate,"sGL_CheckNumber",v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim,"sCheckDate",v.DataTable.AR_Cust(0).CheckOrEffectiveDate!FieldValTrim,"sCheckGrossAmount",v.Local.sTotalGrossAmount,"sCheckDiscountAmount",v.Local.sTotalDiscountAmount,"sCheckNetAmount",v.Local.sTotalNetAmount)
+			F.Intrinsic.String.Build("{0}{1}{2}",V.Local.sGLDetailText,v.Args.sGL_Line_Generated,V.Ambient.NewLine,V.Local.sGLDetailText)
+			'Build sGL_DiscountBatchLine
+			f.Intrinsic.String.LPad(v.Local.iLineGL,"0",5,v.Local.sHold)
+			f.Intrinsic.Control.If(v.Local.sGL_DiscountBatchLines,=,"")
+				v.Local.sGL_DiscountBatchLines.Set(v.Local.sHold)
+			f.Intrinsic.Control.Else
+				f.Intrinsic.String.Concat(v.Local.sGL_DiscountBatchLines,"','",v.Local.sHold,v.Local.sGL_DiscountBatchLines)
+			f.Intrinsic.Control.EndIf
+		f.Intrinsic.Control.EndIf
+		
+		'AR Open Items Line: NetAmount	
+		f.Intrinsic.Math.Add(v.Local.iLine,1,v.Local.iLine)
+		f.Intrinsic.Control.CallSub(Generate_AR_open_items_line,"sCustID",v.DataTable.AR_Cust(0).Customer!FieldValTrim,"sInvoiceNumber",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceNumber!FieldValTrim,"sTransactionCode","11","sBatchNum",v.Global.sBatchNum,"iLine",v.Local.iLine,"sInvoiceDate",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceDate!FieldValTrim,"sTransactionDate", v.Global.sBatchDateNowMMDDYY, "sCheckDate",v.DataTable.AR_Cust(v.Local.iCounter).CheckOrEffectiveDate!FieldValTrim,"sGLAccount",v.local.sAcctRecvGL,"sInvoiceAmount",v.DataTable.AR_Cust(v.Local.iCounter).NetAmount!FieldValTrim,"sTransactionAmount",v.DataTable.AR_Cust(0).CheckAmount!FieldValTrim,"sReference", v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim)	
+		f.Intrinsic.String.Concat(v.Local.sOpenItemText,v.Args.sAR_Line_Generated,v.Ambient.NewLine,v.Local.sOpenItemText)
+		
+		'AR Open Items Line: Discount : Only do the discount when discount amount <> 0
+		f.Intrinsic.Control.If(v.Local.fCreditDiscountAmountLine,<>,0)
+			f.Intrinsic.Math.Add(v.Local.iLine,1,v.Local.iLine)
+			f.Intrinsic.Control.CallSub(Generate_ar_open_items_line,"sCustID",v.DataTable.AR_Cust(v.Local.iCounter).Customer!FieldValTrim,"sInvoiceNumber",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceNumber!FieldValTrim,"sTransactionCode","16","sBatchNum",v.Global.sBatchNum,"iLine",v.Local.iLine,"sInvoiceDate",v.DataTable.AR_Cust(v.Local.iCounter).InvoiceDate!FieldValTrim,"sTransactionDate", v.Global.sBatchDateNowMMDDYY,"sCheckDate",v.DataTable.AR_Cust(v.Local.iCounter).CheckOrEffectiveDate!FieldValTrim,"sGLAccount",v.local.sAcctRecvGL,"sInvoiceAmount",v.DataTable.AR_Cust(v.Local.iCounter).DiscountAmount!FieldValTrim,"sTransactionAmount",v.DataTable.AR_Cust(0).CheckAmount!FieldValTrim,"sReference", v.DataTable.AR_Cust(0).CheckNumber!FieldValTrim)	
+			f.Intrinsic.String.Concat(v.Local.sOpenItemText,v.Args.sAR_Line_Generated,v.Ambient.NewLine,v.Local.sOpenItemText)		
+		f.Intrinsic.Control.EndIf
+	F.Intrinsic.Control.Next(V.Local.iCounter)
+	
+	v.Local.sMap.Set("Customer@!@Customer*!*Name_Customer@!@Name_Customer*!*CheckOrEffectiveDate@!@CheckOrEffectiveDate*!*CheckNumber@!@CheckNumber*!*CheckAmount@!@CheckAmount*!*InvoiceNumber@!@InvoiceNumber*!*InvoiceDate@!@InvoiceDate*!*GrossAmount@!@GrossAmount*!*DiscountAmount@!@DiscountAmount*!*NetAmount@!@NetAmount*!*DateTimeExcel@!@DateTimeExcel*!*DiscountAmtNumeric@!@DiscountAmtNumeric*!*BatchNum@!@BatchNum*!*NetAmtNumeric@!@NetAmtNumeric*!*GrossAmtNumeric@!@GrossAmtNumeric")
+	f.Data.DataTable.SaveToDB("AR_Cust","conx","GCG_4676_Uploaded","",128,v.Local.sMap)
+
+	F.ODBC.Conx!rst.Movenext
+F.Intrinsic.Control.Loop
+f.ODBC.conx!rst.Close
+
+'AR Open Items processing here==============================================================================================================================
+F.Intrinsic.String.Concat(V.caller.FilesDir,"\AROPNITM.TXT",V.Local.sFile)
+F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sOpenItemText)	
+F.Global.General.CallWrapperSync(50,"UPLAROP/U")
+
+f.Intrinsic.Control.For(v.Local.iCnt,0,v.DataTable.Cust_CheckAmount.Rowcount--,1)
+	f.Intrinsic.String.Build("Update AR_Open_Items set Exchange_AMT_TOT = {0} where Customer = '{1}' and ltrim(rtrim(Reference)) = '{2}' and AMT_TRANS_TOTAL = '{3}' and Batch_Num = '{4}'",v.DataTable.Cust_CheckAmount(v.Local.iCnt).CheckAmount!FieldVal,v.DataTable.Cust_CheckAmount(v.Local.iCnt).Customer!FieldValTrim,v.DataTable.Cust_CheckAmount(v.Local.iCnt).CheckNumber!FieldValTrim,v.DataTable.Cust_CheckAmount(v.Local.iCnt).CheckAmount!FieldValTrim,v.Global.sBatchNum,v.Local.sSQL)
+	f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+f.Intrinsic.Control.Next(v.Local.iCnt)
+
+''GL Detail processing here==================================================================================================================================
+F.Intrinsic.String.Build("{0}\GLDETAIL.txt",V.Caller.FilesDir,V.Local.sFile)
+F.Intrinsic.File.String2File(V.Local.sFile,V.Local.sGLDetailText)			
+F.Global.General.CallWrapperSync(50,"UPLGDETL/C")
+
+'Calculate Total of all checks
+f.Intrinsic.String.Build("Select sum(NetAmtNumeric) from GCG_4676_To_UpLoad where BatchNum = '{0}'",v.Global.sBatchNum,v.Local.sSQL) 
+f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sTotalAllCheck)
+
+f.Intrinsic.String.Format(v.Ambient.Now,"HhNnSS",v.Local.sNowHhNnSs00)
+f.Intrinsic.String.Concat(v.Local.sNowHhNnSs00,"00",v.Local.sNowHhNnSs00)
+F.Intrinsic.String.Build("Insert into deposit_ids (DEPOS_ID, SEQUENCE, BATCH, BATCH_LINE, GL_ACCT, LINE_AMT, P_DATE, CLEARED_AMT, TRANSIT_AMT, LAST_CHG_DATE, LAST_CHG_TIME, LAST_CHG_BY, LAST_CHG_PGM) values ('{0}','000','{1}','0001','{2}',{3},'{0}',0.00,0.00,'{0}','{4}','{5}','UPLGDETL')",V.Local.sNowYYYYMMDD,V.Global.sBatchNum,V.Local.sCashAcct,v.Local.sTotalAllCheck,v.Local.sNowHhNnSs00,V.Caller.User,v.local.sSQL)
+f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+
+F.Intrinsic.String.Build("Select Batch from GL_batch_Log where Batch = '{0}' and Date_Entry = '{1}'", v.Global.sBatchNum,v.Global.sBatchDateNowMMDDYY,v.Local.sSQL)
+f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sHold)
+f.Intrinsic.Control.If(v.Local.sHold.Trim,=,"")
+	f.Intrinsic.String.Build("Insert into GL_Batch_Log values ('{0}','{1}','{1}');", v.Global.sBatchNum,v.Global.sBatchDateNowMMDDYY,v.Local.sSQL)
+	f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+f.Intrinsic.Control.EndIf
+
+'Update Customer_Sales
+v.Local.sC.Declare(string)
+v.Local.flastCheckAMt.Declare(float)
+v.Local.iNumDayBatch.Declare(long)
+
+F.Data.Dictionary.CreateFromSQL("Customer_NumOfInvoice","conx","select ltrim(rtrim(Customer)) as Customer, Count(Distinct InvoiceNumber) as NumOfInvoice FROM GCG_4676_To_Upload Group by Customer")
+F.Data.Dictionary.SetDefaultReturn("Customer_NumOfInvoice",0)
+
+F.Data.Dictionary.CreateFromSQL("Customer_AmtBalance","conx","SELECT ltrim(rtrim(Customer)) as Customer, Sum(AMT_Invoice) as AMT_Open_Item_Bal FROM AR_Open_items where ltrim(rtrim(Customer)) in (Select distinct ltrim(rtrim(Customer)) from GCG_4676_To_Upload) group by Customer")
+F.Data.Dictionary.SetDefaultReturn("Customer_AmtBalance",0)
+
+f.Data.DataTable.CreateFromSQL("Customer","conx","Select distinct ltrim(rtrim(Customer)) as Customer from GCG_4676_To_Upload",True)
+f.Intrinsic.Control.For(v.Local.iCnt2,0,v.DataTable.Customer.Rowcount--,1)
+	v.Local.sC.Set(v.datatable.Customer(v.Local.iCnt2).Customer!FieldValTrim)
+	f.Intrinsic.String.Build("select top 1 CheckAmount from GCG_4676_To_Upload where Customer = '{0}' order by AutoNum desc;",v.Local.sC,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.fLastCheckAmt)
+	
+	'Calculate No_Invoice_Day_Tot
+	f.Intrinsic.String.Build("Select sum(DATEDIFF(Day,Date_Invoice,CURRENT_DATE())) from v_AR_OPen_Items where Invoice in (select distinct InvoiceNumber from GCG_4676_To_Upload where ltrim(rtrim(Customer)) = '{0}') and batch_code = '10'",v.Local.sC,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.iNumDayBatch)	
+		
+	f.Intrinsic.String.Build("UPDATE CUSTOMER_SALES SET NO_INVOICES_PAID = NO_INVOICES_PAID + {0},AMT_Open_item_Bal = {1},AMT_LAST_CASH_RCT = {2},DATE_LAST_CASH_RCT = '{3}', No_Invoice_Day_Tot = No_Invoice_Day_Tot + {4} WHERE ltrim(rtrim(CUSTOMER)) = '{5}' and Rec = '2';",V.Dictionary.Customer_NumOfInvoice![v.Local.sC],V.Dictionary.Customer_AmtBalance![v.Local.sC],v.Local.flastCheckAMt,v.Global.sBatchDateNowMMDDYY,v.Local.iNumDayBatch,v.Local.sC,v.Local.sSQL)
+	f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+f.Intrinsic.Control.Next(v.Local.iCnt2)
+F.Data.Dictionary.Close("Customer_NumOfInvoice")
+F.Data.Dictionary.Close("Customer_AmtBalance")
+f.Data.DataTable.Close("Customer")
+
+'Data has been transfered from GCG_4676_To_Upload to GCG_4676_To_Upload
+'Now delete
+f.Intrinsic.String.Build("Delete from GCG_4676_To_UpLoad where BatchNum = '{0}'",v.Global.sBatchNum,v.Local.sSQL)
+f.ODBC.Connection!conx.Execute(v.Local.sSQL)
+
+f.Intrinsic.UI.CloseWaitDialog
+
+'Feed data to generate Audit Trail
+
+f.Intrinsic.String.Build("Select GL_Number as GL_ACCOUNT, POST_DATE, Batch as BATCH_NUM, Line as BATCH_LINE, REFERENCE, AMOUNT_CMPNY as AMOUNT, DB_CR_FLAG, '' AS CUSTOMER, '' AS INVOICE_NO, Convert('1900-01-01',SQL_Date) as INVC_DATE from GL_Detail where Post_Date = '{0}'",v.Local.sNowYYYYMMDD,v.Local.sSQL)
+f.Data.DataTable.CreateFromSQL("AuditTrail","conx",v.Local.sSQL,true)
+'f.ODBC.Connection!conx.Execute("Delete from GCG_4676_AuditTrail")
+'v.Local.sMap.Set("GL_ACCOUNT@!@GL_ACCOUNT*!*POST_DATE@!@POST_DATE*!*BATCH_NUM@!@BATCH_NUM*!*BATCH_LINE@!@BATCH_LINE*!*REFERENCE@!@REFERENCE*!*AMOUNT@!@AMOUNT*!*DB_CR_FLAG@!@DB_CR_FLAG*!*CUSTOMER@!@CUSTOMER*!*INVOICE_NO@!@INVOICE_NO*!*INVC_DATE@!@INVC_DATE")
+'f.Data.DataTable.SaveToDB("AuditTrail","conx","GCG_4676_AuditTrail","",128,v.Local.sMap)
+
+'Generate report
+v.Local..BulkDeclareLong(iBIRunID,iRptID,iBILogID)
+v.Local..BulkDeclareString(sVal,sParam)
+'Log Report
+F.Global.BI.GetRunID(V.Local.iBIRunID)
+f.Global.BI.GetIDFromName("GCG_4676_CashReceiptJournal_NEW.rpt",True,v.Local.iRptID)
+F.Global.BI.StartLogging(V.Local.iBIRunID,v.Local.iRptID,-1,"",V.Local.iBILogID)
+
+'Stop Logging
+F.Global.BI.StopLogging(V.Local.iBILogID)
+
+f.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}",v.Global.sBatchNum,v.Local.sAcctRecvGL,v.Local.sCashAcct,v.Local.sDiscountGL,v.Ambient.PDSN,v.Local.sVal)
+V.Local.sParam.Set("Batch_Num*!*AcctRecv*!*CashAcct*!*SalesDiscount*!*Company_Name")
+
+'Call an Async process
+f.Intrinsic.String.Build("{0}\GCG_4676_Finalize.g2u",v.Caller.GasDir,v.Local.sFinalizeProgramPath)
+f.Intrinsic.String.Mid(v.Global.sBatchDateNowMMDDYY,3,2,v.Local.sPostDate)
+f.Intrinsic.String.Concat("20",v.Global.sBatchDateNowMMDDYY.right2,"-",v.Global.sBatchDateNowMMDDYY.left2,"-",v.Local.sPostDate,v.Local.sPostDate)
+f.Intrinsic.String.Build("{0}@!@{1}@!@{2}",v.Local.sPostDate,v.Global.sBatchNum,v.Local.sGL_DiscountBatchLines,v.Local.sSwitches)
+function.Global.General.CallAsyncGAS(v.Local.sFinalizeProgramPath,v.Local.sSwitches,v.Local.iPIDReturn)
+
+'Print the Report
+F.Global.BI.RunReportPreProcessor(V.Local.iBIRunID,V.Local.iBILogID,V.Local.sParam,V.Local.sVal,"",-1,True,"",-1,"",-1,"","",V.Local.iBIRunID)
+
+f.Intrinsic.Control.CallSub(form_unload)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Process_File_Err")
+f.Intrinsic.UI.Msgbox("error")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Process_File.End
+
+Program.Sub.Generate_GL_Detail_Line.Start
+F.Intrinsic.Control.SetErrorHandler("Add_GL_Detail_Line_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sGLDTLine, sHold, sError)
+'Args: 
+	'sGL_CashGLAccount (ex: 1010000)
+	'sGL_BatchNum
+	'iGL_BatchLine
+	'sGL_Reference: v.DataTable.AR(0).ReferenceNumber!FieldValTrim for line 1
+	'sGL_Amount: v.Screen.FORM!lblTotalNetAmount.Text.Trim for Line 1
+	'sGL_Desc: customer name
+	'sGL_TransCode: 11 Cash Receipt or 16 Discount
+	'sGL_Cust: v.DataTable.AR(0).PayerID!FieldValTrim
+	'sGL_InvoiceNum: DEBIT for line 1, and 2, from 3 will be InvoiceNum
+	'sGL_InvoiceDate: 8 CCYYMMDD
+	'sGL_InvoiceDueDate: 8 CCYYMMDD
+	
+	'sGL_CheckNumber: 6 characters  v.DataTable.AR(0).CheckNumber!FieldValTrim
+	'sCheckDate:	 v.DataTable.AR(v.local.icounter).CheckOrEffectiveDate!FieldValTrim
+	'sCheckGrossAmount v.DataTable.AR(v.local.icounter).GrossAmount!FieldValTrim
+	'sCheckDiscountAmount v.DataTable.AR(v.local.icounter).DiscountAmount!FieldValTrim
+	'sCheckNetAmount v.DataTable.AR(v.local.icounter).NetAmount!FieldValTrim
+	
+	'GL Account 1-15
+	F.Intrinsic.String.RPad(v.Args.sGL_CashGLAccount," ",15,V.Local.sGLDTLine)
+	
+'	'Post Date 16-23
+	F.Intrinsic.String.Format(v.Ambient.Date,"YYYYMMDD",V.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,V.Local.sHold,V.Local.sGLDTLine)
+'	
+'	Transction Batch Number 24-28
+	f.Intrinsic.String.RPad(v.Args.sGL_BatchNum," ",5, v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+'			
+	'Batch line	29-33	
+	f.Intrinsic.String.LPad(v.Args.iGL_BatchLine,"0",5,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+
+'	Vouncher Number 34-40
+	
+'	'Reference 41-55
+	F.Intrinsic.String.RPad(V.Local.sGLDTLine," ",40,V.Local.sGLDTLine)
+	f.Intrinsic.String.RPad(v.Args.sGL_Reference," ",15, v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)	
+'	
+'	'Amount 56-71
+	F.Intrinsic.String.Format(v.Args.sGL_Amount,"0.00",V.Local.sHold)
+	f.Intrinsic.String.LPad(v.Local.sHold," ",16,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+'	
+	'Description 72-101 will be customer name
+	F.Intrinsic.String.RPad(V.Args.sGL_Desc," ",30,V.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+	
+	'Appliation Type 102-103	
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,"AR",V.Local.sGLDTLine)
+
+'	'Transaction Type 104-105
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Args.sGL_TransCode,V.Local.sGLDTLine)
+'	
+'	'Customer ID 106-112
+	f.Intrinsic.String.RPad(v.Args.sGL_Cust," ",7,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+	
+'	Invoice Number 127-141 15
+	F.Intrinsic.String.RPad(V.Local.sGLDTLine," ",126,V.Local.sGLDTLine)
+	f.Intrinsic.String.RPad(v.Args.sGL_InvoiceNum," ",15,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,V.Local.sHold,V.Local.sGLDTLine)
+'	
+'	Invoice Date CCYYMMDD 142-149 8
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,V.Args.sGL_InvoiceDate,V.Local.sGLDTLine)
+	
+'	Invoice Due Date CCYYMMDD 150-157 8
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,V.Args.sGL_InvoiceDueDate,V.Local.sGLDTLine)
+	
+'	Check System 158-159 2
+'	Required only if Application Type = CK, must be AP or AR.  Otherwise, optional: Upload will determine using the Application Type.
+	F.Intrinsic.String.RPad(V.Local.sGLDTLine," ",157,V.Local.sGLDTLine)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,"AR",V.Local.sGLDTLine)
+
+'	Check Number 160-165
+	f.Intrinsic.String.RPad(v.Args.sGL_CheckNumber," ",6,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+
+	'CheckDate 166-173
+	F.Intrinsic.String.Concat(V.Local.sGLDTLine,"20",v.Args.sCheckDate,V.Local.sGLDTLine)
+	
+'	'Check GrossAmout	174-189 16 +-14.2
+'	F.Intrinsic.String.Format(v.Args.sCheckGrossAmount,"0.00",V.Local.sHold)
+'	f.Intrinsic.String.LPad(v.Local.sHold," ",16,v.Local.sHold)
+'	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+'	
+'	'Check DiscountAmout	190-200 16 +-14.2
+'	F.Intrinsic.String.Format(v.Args.sCheckDiscountAmount,"0.00",V.Local.sHold)
+'	f.Intrinsic.String.LPad(v.Local.sHold," ",16,v.Local.sHold)
+'	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+'	
+'	'Check NetAmout	201-217 16 +-14.2
+'	F.Intrinsic.String.Format(v.Args.sCheckNetAmount,"0.00",V.Local.sHold)
+'	f.Intrinsic.String.LPad(v.Local.sHold," ",16,v.Local.sHold)
+'	F.Intrinsic.String.Concat(V.Local.sGLDTLine,v.Local.sHold,V.Local.sGLDTLine)
+	
+	
+Function.Intrinsic.Variable.AddRV("sGL_Line_Generated",V.Local.sGLDTLine)
+f.Intrinsic.Control.DoEvents
+
+	
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Add_GL_Detail_Line_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Generate_GL_Detail_Line.End
+
+Program.Sub.Generate_AR_Open_Items_Line.Start
+F.Intrinsic.Control.SetErrorHandler("Add_AR_Open_Items_Line_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sOITLine, sHold, sHold2, sRet, sSQL)
+v.Local..BulkDeclareFloat(fHold)
+	'sCustID: v.DataTable.AR(v.Local.iCounter).PayerID!FieldValTrim
+	'sInvoiceNumber: v.DataTable.AR(v.Local.iCounter).InvoiceNumber!FieldValTrim
+	'sTransactionCode 11 or 16
+	'sBatchNum: 
+	'iLine
+	'sInvoiceDate: v.DataTable.AR(v.Local.iCounter).InvoiceDate!FieldValTrim
+	'sTransactionDate: v.Global.sBatchDateNowMMDDYY
+	'sCheckDate: v.DataTable.AR(v.Local.iCounter).CheckOrEffectiveDate!FieldValTrim	
+	'sGLAccount: "1130000" or 
+	'sInvoiceAmount: v.DataTable.AR(v.Local.iCounter).NetAmount!FieldValTrim
+	'sReference: v.DataTable.AR(v.Local.iCounter).ReferenceNumber!FieldValTrim
+	
+	'Customer number - 1-6 
+	f.Intrinsic.String.RPad(v.Args.sCustID," ",7,v.Local.sHold)
+	v.Local.sOITLine.Set(v.Local.sHold)
+				
+	'Invoice number 8-13
+	f.Intrinsic.String.RPad(v.Args.sInvoiceNumber," ",6,v.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)	
+	
+	'Transaction code 15-16
+	f.Intrinsic.String.RPad(v.Local.sOITLine," ",14,v.Local.sOITLine)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Args.sTransactionCode,v.Local.sOITLine)
+	
+	'Batch number 17-21 
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Args.sBatchNum,v.Local.sOITLine)
+	'Batch Line 22-25
+	F.Intrinsic.String.LPad(v.Args.iLine,"0",4,V.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)
+		
+	'Invoice Date MMDDYY 26-31
+	f.Intrinsic.String.Split(v.Args.sInvoiceDate," ",v.Local.sHold)
+	f.Intrinsic.String.Split(v.Local.sHold(0),"/",v.Local.sHold)
+	f.Intrinsic.String.LPad(v.Local.sHold(0),"0",2,v.Local.sHold(0))
+	f.Intrinsic.String.LPad(v.Local.sHold(1),"0",2,v.Local.sHold(1))
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold(0),v.Local.sHold(1),v.Local.sHold(2).right2,v.Local.sOITLine)
+	
+	'Transaction Date 32-37
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Args.sTransactionDate,v.Local.sOITLine)		
+
+	'Check Date 38-43	
+	F.Intrinsic.String.Mid(v.Args.sCheckDate,3,2,V.Local.sHold)
+	F.Intrinsic.String.Trim(v.Args.sCheckDate,V.Local.sHold2)	
+	f.Intrinsic.String.Concat(v.Local.sOITLine,V.Local.sHold,V.Local.sHold2.Right2,v.Local.sHold2.left2,v.Local.sOITLine)
+	
+	'Retain flag 44-44 
+	f.Intrinsic.String.Concat(v.Local.sOITLine," ",v.Local.sOITLine)
+	
+	'Invoice Total 45-60
+	F.Intrinsic.String.Format(v.Args.sTransactionAmount,"0.00",V.Local.sHold)
+	F.Intrinsic.String.LPad(V.Local.sHold," ",16,V.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)
+	
+	'GL Account 61-75
+	f.Intrinsic.String.RPad(v.Args.sGLAccount," ",15,v.Local.sHold)
+	F.Intrinsic.String.Concat(V.local.sOITLine,v.Local.sHold,V.local.sOITLine)
+
+	'Invoice amount 76-91  (This is not required for the upload but it is recommended for aging purposes)
+	v.Local.fHold.Set(v.Args.sInvoiceAmount)
+	f.Intrinsic.Math.Sub(0,v.Local.fHold,v.Local.fHold)	
+	F.Intrinsic.String.Format(v.Local.fHold,"0.00",V.Local.sHold)
+	F.Intrinsic.String.LPad(V.Local.sHold," ",16,V.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)
+	
+	'Rererence (check number) 95-116
+	f.Intrinsic.String.RPad(v.local.sOITLine," ",94,v.local.sOITLine)
+	f.Intrinsic.String.Concat(v.local.sOITLine,v.Args.sReference,v.Local.sOITLine)
+	
+	'Sales man 92-94
+ 
+	'Exchange Currency ISO Code 140-142 - 3 characters
+	f.Intrinsic.String.RPad(v.Local.sOITLine," ",139,v.Local.sOITLine)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,"USD",v.Local.sOITLine)
+	
+'	Exchange Rate Date CCYYMMDD 143-150 8 characters	
+	f.Intrinsic.String.Concat(v.Local.sOITLine,"00000000",v.Local.sOITLine)
+	
+	'Exchange Amount 167-182
+	f.Intrinsic.String.RPad(v.Local.sOITLine," ",166,v.Local.sOITLine)
+	
+	v.Local.fHold.Set(v.Args.sInvoiceAmount)
+	f.Intrinsic.Math.Sub(0,v.Local.fHold,v.Local.fHold)	
+	F.Intrinsic.String.Format(v.Local.fHold,"0.00",V.Local.sHold)
+	F.Intrinsic.String.LPad(V.Local.sHold," ",16,V.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)
+	
+	'Exchange Invoice Total Amount 183-198
+	F.Intrinsic.String.Format(v.Args.sInvoiceAmount,"0.00",V.Local.sHold)
+	F.Intrinsic.String.LPad(V.Local.sHold," ",16,V.Local.sHold)	
+'	F.Intrinsic.String.Format(v.Screen.FORM!lblTotalNetAmount.Text.Trim,"-0.00",V.Local.sHold)
+'	F.Intrinsic.String.LPad(V.Local.sHold," ",16,V.Local.sHold)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sHold,v.Local.sOITLine)
+
+	'Order No, Order_suffix	
+	f.Intrinsic.String.RPad(v.Args.sInvoiceNumber," ",6,v.Local.sHold)
+	f.Intrinsic.String.Build("Select top 1 Order_No + Order_Suffix as Order_No_Order_Suffix from v_ar_open_items where invoice = '{0}'",v.Local.sHold,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet,<>,"")
+		f.Intrinsic.String.RPad(v.Local.sOITLine," ",198,v.Local.sOITLine)
+		f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sRet,v.Local.sOITLine)
+	f.Intrinsic.Control.EndIf	
+	
+	'Invoice Due Date  210-217 (This is not required for the upload but it is recommended for aging purposes.)
+	f.Intrinsic.String.RPad(v.Args.sInvoiceNumber," ",6,v.Local.sHold)
+	f.Intrinsic.String.Build("Select top 1 Due_date from ar_open_items where invoice = '{0}'",v.Local.sHold,v.Local.sSQL)
+	f.ODBC.Connection!conx.ExecuteAndReturn(v.Local.sSQL,v.Local.sRet)
+	f.Intrinsic.Control.If(v.Local.sRet,<>,"")
+		f.Intrinsic.String.RPad(v.Local.sOITLine," ",209,v.Local.sOITLine)
+		f.Intrinsic.String.Concat(v.Local.sOITLine,v.Local.sRet,v.Local.sOITLine)
+	f.Intrinsic.Control.EndIf	
+	
+	'Factor Cash Flag Y/N 218-218 - 1 character
+	f.Intrinsic.String.RPad(v.Local.sOITLine," ",217,v.Local.sOITLine)
+	f.Intrinsic.String.Concat(v.Local.sOITLine," ",v.Local.sOITLine)
+	
+	'Refund Credit Memo Batch 219-223 - 5 characters
+	f.Intrinsic.String.RPad(v.Local.sOITLine," ",218,v.Local.sOITLine)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,"     ",v.Local.sOITLine)
+	
+'	Refund Credit Memo Line 224-226 - 3 characters
+ 	f.Intrinsic.String.RPad(v.Local.sOITLine," ",223,v.Local.sOITLine)
+	f.Intrinsic.String.Concat(v.Local.sOITLine,"  0",v.Local.sOITLine)
+	
+Function.Intrinsic.Variable.AddRV("sAR_Line_Generated",v.Local.sOITLine)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Add_AR_Open_Items_Line_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Generate_AR_Open_Items_Line.End
+
+Program.Sub.Format_GV.Start
+F.Intrinsic.Control.SetErrorHandler("Format_GV_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+Gui.Form.Gs.SetColumnProperty("GV", "SenderId", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "ReceiverId", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "FileCreationDate", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "FileCreationTime", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "ReferenceNumber", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "VoucherNumber", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "VoucherDueDate", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "Description", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "AdjustedAmount", "Visible", False)
+Gui.Form.Gs.SetColumnProperty("GV", "Comments", "Visible", False)
+
+Gui.Form.Gs.SetColumnProperty("GV", "PayerCompanyName","ToolTip","Is populated based on PayerID")
+Gui.Form.Gs.SetColumnProperty("GV", "PayerID","ToolTip","PayerID must be valid customer")
+Gui.Form.Gs.SetColumnProperty("GV", "CheckOrEffectiveDate", "ToolTip", "CheckOrEffectiveDate must not be blank. Format: YYMMDD")
+Gui.Form.Gs.SetColumnProperty("GV", "CheckNumber", "ToolTip", "CheckNumber must not be blank")
+Gui.Form.Gs.SetColumnProperty("GV", "CheckAmount", "ToolTip", "CheckAmount must be numberic = sum of NetAmount of the group")
+Gui.Form.Gs.SetColumnProperty("GV", "InvoiceNumber", "ToolTip", "InvoiceNumber must be in AR_Open_Item for the specific customer and specific InvoiceDate")
+Gui.Form.Gs.SetColumnProperty("GV", "InvoiceDate", "ToolTip", "InvoiceDate format: mm/dd/yyyy and exist in AR_Open_Item for the specific customer")
+Gui.Form.Gs.SetColumnProperty("GV", "GrossAmount", "ToolTip", "GrossAmount must be numeric <= Invoice Amount in AR_Open_Item and = Discount Amount + NetAmount")
+Gui.Form.Gs.SetColumnProperty("GV", "DiscountAmount", "ToolTip", "DiscountAmount must be numeric")
+Gui.Form.Gs.SetColumnProperty("GV", "NetAmount", "ToolTip", "NetAmount must be numeric")
+Gui.Form.Gs.SetColumnProperty("GV", "Status", "ToolTip", "Upload can only proceed if there isn't any error record and the CheckAmount = sum of NetAmount of the specific group")
+Gui.Form.Gs.SetColumnProperty("GV", "BatchNum", "ToolTip", "BatchNum prefix is 'H' as for custom Cash Receipt Upload and auto incremented")
+
+gui.Form.gs.setColumnProperty("GV","PayerID","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","PayerID","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","CheckOrEffectiveDate","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","CheckOrEffectiveDate","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","CheckNumber","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","CheckNumber","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","CheckAmount","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","CheckAmount","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","InvoiceNumber","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","InvoiceNumber","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","InvoiceDate","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","InvoiceDate","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","GrossAmount","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","GrossAmount","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","DiscountAmount","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","DiscountAmount","ReadOnly",False)
+
+gui.Form.gs.setColumnProperty("GV","NetAmount","AllowEdit",True)
+gui.Form.gs.setColumnProperty("GV","NetAmount","ReadOnly",False)
+gui.Form.gs.setColumnProperty("GV","FGross","Visible",False)
+gui.Form.gs.setColumnProperty("GV","FNet","Visible",False)
+gui.Form.gs.setColumnProperty("GV","FDiscount","Visible",False)
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Format_GV_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+Program.Sub.Format_GV.End
+
+Program.Sub.FORM_UnLoad.Start
+F.Intrinsic.Control.SetErrorHandler("FORM_UnLoad_Err")
+F.Intrinsic.Control.ClearErrors
+V.Local.sError.Declare(String)
+
+f.ODBC.Connection!conx.Close
+f.Intrinsic.Control.End
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("FORM_UnLoad_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Cash_Receipts_Upload.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.FORM_UnLoad.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$$}$7/31/2017 8:41:13 AM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$This will be a custom GAB script that will run from a custom Menu Item under Bill of Material -> File -> Custom Cobalt BOM Import.  The user will navigate to the xml file that needs to be loaded into Global Shop.  Once the xml is parsed there will be a search in Global Shop to see if a BOM already exists for that Part Number.  If one already exists a compare screen will display showing the differences between the two.  If one does not exist then the screen will display the BOM as it will be uploaded into Global Shop.  Any parts that are listed in the BOM that are not Inventory Parts will be highlighted in Yellow.  If there are any parts not in inventory the user will have the option to click the create Parts button to generate those parts in Global Shop.  If the BOM exists in Global shop then any differences on the new import will be highlighted in Red.  After the Parts have been created then the Upload button will upload and override any previous BOM for that part.}$12:00:00 AM
+Program.Sub.Comments.End
