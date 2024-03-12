@@ -1,0 +1,18 @@
+CREATE TABLE "GCG_4676_To_Upload"(
+ "Autonum" IDENTITY DEFAULT '0',
+ "Customer" CHAR(6),
+ "Name_Customer" CHAR(30),
+ "CheckOrEffectiveDate" CHAR(8),
+ "CheckNumber" CHAR(20),
+ "CheckAmount" NUMERIC(15,2),
+ "InvoiceNumber" CHAR(15),
+ "InvoiceDate" CHAR(15),
+ "GrossAmount" CHAR(15),
+ "DiscountAmount" CHAR(15),
+ "NetAmount" CHAR(15),
+ "DateTimeExcel" TIMESTAMP,
+ "DiscountAmtNumeric" NUMERIC(15,2),
+ "BatchNum" CHAR(50),
+ "NetAmtNumeric" NUMERIC(15,2),
+ "GrossAmtNumeric" NUMERIC(15,2),
+ UNIQUE ("Autonum"));
