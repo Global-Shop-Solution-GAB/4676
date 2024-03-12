@@ -1,0 +1,103 @@
+Program.Sub.ScreenSU.Start
+Gui.Form..Create
+Gui.Form..Caption("Batch Num")
+Gui.Form..Size(3675,1800)
+Gui.Form..MinX(0)
+Gui.Form..MinY(0)
+Gui.Form..Position(0,0)
+Gui.Form..BackColor(-2147483633)
+Gui.Form..MousePointer(0)
+Gui.Form..Event(UnLoad,Form_UnLoad)
+Gui.Form.txt1.Create(TextBox,"",True,1215,300,0,285,225,True,0,"Arial",8,-2147483643,1)
+Gui.Form.cmdOK.Create(Button)
+Gui.Form.cmdOK.Size(855,375)
+Gui.Form.cmdOK.Position(300,645)
+Gui.Form.cmdOK.Caption("OK")
+Gui.Form.cmdOK.Event(Click,cmdOK_Click)
+Program.Sub.ScreenSU.End
+
+Program.Sub.Preflight.Start
+v.Global..BulkDeclareString(sFileExcel, sFileExcel_Result, sBatchNum, sBatchDateNowMMDDYY)
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.ODBC.Connection!conx.OpenCompanyConnection
+GUI.Form..Show
+Program.Sub.Main.End
+
+Program.Sub.cmdOK_Click.Start
+'Generate report
+v.Local..BulkDeclareLong(iBIRunID,iRptID,iBILogID)
+v.Local..BulkDeclareString(sVal,sParam, sAcctRecvGL, sNetGL, sDiscountGL)
+F.Intrinsic.Control.If(V.Ambient.PDSN.Trim,=,"GLOBAL_BAO")
+	v.Local.sNetGL.Set("100")
+	v.Local.sDiscountGL.Set("411")
+	v.Local.sAcctRecvGL.Set("110")
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_CRD")
+	'Cash Account
+	v.Local.sNetGL.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110000")	
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_BRD")
+	'Cash Account
+	v.Local.sNetGL.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110000")	
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_PLA")
+	'Cash Account
+	v.Local.sNetGL.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110001")
+F.Intrinsic.Control.ElseIf(V.Ambient.PDSN.Trim,=,"GLOBAL_TST")
+	'Cash Account
+	v.Local.sNetGL.Set("1020000")
+	'Account Receivable Account
+	v.Local.sAcctRecvGL.Set("1130000")
+	'Sales Discount Account
+	v.Local.sDiscountGL.Set("4110000")	
+f.Intrinsic.Control.Else
+	v.Local.sNetGL.Set("100")
+	v.Local.sDiscountGL.Set("411")
+	v.Local.sAcctRecvGL.Set("110")
+'	f.Intrinsic.UI.Msgbox("Please set up GL accounts per company")
+'	f.Intrinsic.Control.ExitSub
+F.Intrinsic.Control.EndIf
+
+V.Global.sBatchNum.Set(V.Screen.Form!txt1.Text.Trim)
+
+'Log Report
+F.Global.BI.GetRunID(V.Local.iBIRunID)
+f.Global.BI.GetIDFromName("GCG_4676_CashReceiptJournal_NEW.rpt",True,v.Local.iRptID)
+F.Global.BI.StartLogging(V.Local.iBIRunID,v.Local.iRptID,-1,"",V.Local.iBILogID)
+
+'Stop Logging
+F.Global.BI.StopLogging(V.Local.iBILogID)
+
+f.Intrinsic.String.Build("{0}*!*{1}*!*{2}*!*{3}*!*{4}",v.Global.sBatchNum,v.Local.sAcctRecvGL,v.Local.sNetGL,v.Local.sDiscountGL,v.Ambient.PDSN,v.Local.sVal)
+V.Local.sParam.Set("Batch_Num*!*AcctRecv*!*CashAcct*!*SalesDiscount*!*Company_Name")
+
+'Print the Report
+F.Global.BI.RunReportPreProcessor(V.Local.iBIRunID,V.Local.iBILogID,V.Local.sParam,V.Local.sVal,"",-1,True,"",-1,"",-1,"","",V.Local.iBIRunID)
+
+f.Intrinsic.Control.CallSub(form_unload)
+Program.Sub.cmdOK_Click.End
+
+Program.Sub.Form_UnLoad.Start
+f.ODBC.Connection!conx.Close
+F.Intrinsic.Control.End
+
+Program.Sub.Form_UnLoad.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$$}$1/20/2017 10:03:07 AM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$This project was quoted by Strider Smith and coded by Sisco Quiroz
+September 2016.
+
+This code will run from a custom menu item under Production>Shop Floor Control>Transactions>Transfer WIP to WIP for multiple jobs.
+Program.Sub.Comments.End
