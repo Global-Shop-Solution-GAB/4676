@@ -1,0 +1,83 @@
+Program.Sub.Preflight.Start
+
+Program.Sub.Preflight.End
+
+Program.Sub.Main.Start
+F.Intrinsic.Control.SetErrorHandler("Main_Err")
+F.Intrinsic.Control.ClearErrors
+v.Local..BulkDeclareString(sError, sSQL, sHold, sPostDateWithDashes, sPostDate, sBatchNum, sGL_DiscountBatchLines)
+
+F.ODBC.Connection!conUpdateGL.OpenConnection(V.Ambient.PDSN,V.Ambient.PUser,V.Ambient.PPass,15000)
+
+f.Intrinsic.String.Split(v.Caller.Switches,"@!@",v.Local.sHold)
+f.Intrinsic.Control.If(v.Local.sHold(0),<>,"")
+	v.Local.sPostDateWithDashes.Set(v.Local.sHold(0))
+	v.Local.sBatchNum.Set(v.Local.sHold(1))
+	v.Local.sGL_DiscountBatchLines.Set(v.Local.sHold(2))
+	
+	F.Intrinsic.String.Replace(V.Local.sPostDateWithDashes,"-","",V.Local.sPostDate)
+	
+	'Update Period
+	f.Intrinsic.String.Build("Update GL_Detail set Period = (select Period from V_GL_Calendar where Beg_date <= '{0}' and End_date >= '{0}') where Batch = '{1}' AND Post_Date = '{2}'",v.Local.sPostDateWithDashes,v.Local.sBatchNum,V.Local.sPostDate,v.Local.sSQL)
+	f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	f.Intrinsic.String.Build("Update GL_Detail g set Period_Beg_Date_sql = (select Top 1 Beg_Date from v_GL_Calendar c where Convert(g.Period,sql_Float) = Convert(c.Period,SQL_float) AND START_Year = left(g.Post_Date,4)) where Batch = '{0}' AND Post_Date = '{1}'",v.Local.sBatchNum,V.Local.sPostDate,v.Local.sSQL)
+	f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	f.Intrinsic.String.Build("Update GL_Detail g set Period_End_Date_sql = (select Top 1 End_Date from v_GL_Calendar c where Convert(g.Period,sql_Float) = Convert(c.Period,SQL_float) AND START_Year = left(g.Post_Date,4)) where Batch = '{0}' AND Post_Date = '{1}'",v.Local.sBatchNum,V.Local.sPostDate,v.Local.sSQL)
+	f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	
+	'BN, May 21 2021 Now GL_Detail has Tran_Type and well updated with 11 and 16
+	'F.Intrinsic.String.Build("Update GL_Detail set AR_Code = '11' where Batch = '{0}'",v.Local.sBatchNum,v.Local.sSQL)
+	'f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	'f.Intrinsic.String.Build("Update GL_Detail set Tran_Type = '16', AR_Code = '16' where Batch = '{0}' and line in ('{1}')  AND Post_Date = '{2}';",v.Local.sBatchNum,v.Local.sGL_DiscountBatchLines,V.Local.sPostDate,v.Local.sSQL)
+	'f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	
+	'BN, May 21 2021 Now GL_Detail has no Exch_Amt, Exch_InvToT	
+	'f.Intrinsic.String.Build("update GL_Detail set Exch_Amt = Amount where Batch = '{0}';",v.Local.sBatchNum,v.Local.sSQL)
+	'f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	'f.Intrinsic.String.Build("update GL_Detail g set Exch_InvToT = (Select Top 1 Amt_Trans_Total from AR_Open_Items a where a.Batch_Num = g.Batch_Num AND a.REFERENCE = g.Reference) where Batch = '{0}' AND Post_Date = '{1}';",v.Local.sBatchNum,V.Local.sPostDate,v.Local.sSQL)
+	'f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	'f.Intrinsic.String.Build("update GL_Detail g set InvToT = (Select Top 1 Amt_Trans_Total from AR_Open_Items a where a.Batch_Num = g.Batch_Num AND a.REFERENCE = g.Reference) where Batch_num = '{0}' AND Post_Date = '{1}';",v.Local.sBatchNum,V.Local.sPostDate,v.Local.sSQL)
+	'f.ODBC.Connection!conUpdateGL.Execute(v.Local.sSQL)
+	
+
+f.Intrinsic.Control.EndIf
+
+f.ODBC.Connection!conUpdateGL.Close
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Main_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Finalize.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+	f.Intrinsic.Control.CallSub(unload)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Main.End
+
+Program.Sub.Unload.Start
+F.Intrinsic.Control.SetErrorHandler("Unload_Err")
+F.Intrinsic.Control.ClearErrors
+
+V.Local.sError.Declare(String)
+
+
+f.ODBC.Connection!conUpdateGL.Close
+
+
+F.Intrinsic.Control.ExitSub
+
+F.Intrinsic.Control.Label("Unload_Err")
+F.Intrinsic.Control.If(V.Ambient.ErrorNumber,<>,0)
+	Function.Intrinsic.String.Concat("Project: GCG_4676_Finalize.g2u",V.Ambient.Newline,V.Ambient.Newline,"Subroutine: ",V.Ambient.CurrentSubroutine,V.Ambient.NewLine,"Error Occurred ",V.Ambient.ErrorNumber," with description ",V.Ambient.ErrorDescription,V.Local.sError)
+	F.Intrinsic.UI.Msgbox(V.Local.sError)
+Function.Intrinsic.Control.EndIf
+
+
+Program.Sub.Unload.End
+
+Program.Sub.Comments.Start
+${$0$}$$}$$}$10/17/2017 12:08:17 PM$}$False
+${$3$}$0$}$$}$0$}$-1$}$$}$12:00:00 AM$}$This will be a custom GAB script that will run from a custom Menu Item under Bill of Material -> File -> Custom Cobalt BOM Import.  The user will navigate to the xml file that needs to be loaded into Global Shop.  Once the xml is parsed there will be a search in Global Shop to see if a BOM already exists for that Part Number.  If one already exists a compare screen will display showing the differences between the two.  If one does not exist then the screen will display the BOM as it will be uploaded into Global Shop.  Any parts that are listed in the BOM that are not Inventory Parts will be highlighted in Yellow.  If there are any parts not in inventory the user will have the option to click the create Parts button to generate those parts in Global Shop.  If the BOM exists in Global shop then any differences on the new import will be highlighted in Red.  After the Parts have been created then the Upload button will upload and override any previous BOM for that part.}$12:00:00 AM
+Program.Sub.Comments.End
